@@ -1,0 +1,102 @@
+{
+  "version": "1.0.0",
+  "description": "Default credit system parameters implementing section 10",
+  "parameters": {
+    "caps_and_limits": {
+      "C_max": 100,
+      "I_max_base_rate": 0.05,
+      "S_max_multiplier": 0.8,
+      "comment": "C_max: per-human soft cap, I_max: 5% of population per epoch, S_max: 80% of I_max"
+    },
+    "earning_multipliers": {
+      "beta0": 0.6,
+      "beta1": 0.4,
+      "theta": 0.5,
+      "comment": "beta0: base multiplier, beta1: proximity bonus, theta: scarcity midpoint"
+    },
+    "spend_costs": {
+      "c_local": 2,
+      "c_xbranch": 5,
+      "c_global": 10,
+      "comment": "Credits required for different escalation levels"
+    },
+    "quorum_rules": {
+      "alpha": 0.40,
+      "q": 3,
+      "tau": 0.60,
+      "comment": "alpha: participation rate, q: path diversity, tau: approval threshold"
+    },
+    "escalation_weights": {
+      "gamma1": 0.6,
+      "gamma2": 0.3,
+      "gamma3": 0.1,
+      "Theta_esc": 0.35,
+      "comment": "gamma: impact/need/diversity weights, Theta_esc: escalation trigger"
+    },
+    "neighbor_selection": {
+      "lambda1": 0.6,
+      "lambda2": 0.3,
+      "lambda3": 0.1,
+      "max_neighbors": 5,
+      "comment": "lambda: connectedness/scarcity/load weights, max neighbors to invite"
+    },
+    "decay_parameters": {
+      "H_c_days": 180,
+      "delta": 0.5,
+      "comment": "H_c: credit half-life in days, delta: decay base for exponential decay"
+    },
+    "action_base_awards": {
+      "mediation": 8.0,
+      "support_response": 3.0,
+      "replication": 2.0,
+      "moderation": 4.0,
+      "education": 5.0,
+      "care_work": 6.0,
+      "infrastructure": 3.0,
+      "other": 2.0,
+      "comment": "Base credit awards for different types of care labor"
+    }
+  },
+  "validation_rules": {
+    "credit_amounts": {
+      "min": 0.0,
+      "max": 1000.0,
+      "precision": 2,
+      "comment": "Credit amounts must be non-negative with 2 decimal places"
+    },
+    "rates_and_factors": {
+      "min": 0.0,
+      "max": 1.0,
+      "comment": "Rates and factors must be in [0,1] range"
+    },
+    "threshold_ordering": [
+      "alpha < tau",
+      "gamma1 > gamma2 > gamma3",
+      "lambda1 > lambda2 > lambda3",
+      "c_local < c_xbranch < c_global"
+    ]
+  },
+  "tuning_guidelines": {
+    "conservative_start": "Begin with these defaults and adjust based on observed behavior",
+    "metrics_to_watch": [
+      "Credit inequality (Gini coefficient)",
+      "Escalation frequency vs. resolution rate", 
+      "Branch diversity scores over time",
+      "Unused issuance capacity per epoch"
+    ],
+    "adjustment_triggers": {
+      "increase_base_awards": "If overall activity is too low",
+      "increase_decay_rate": "If credit hoarding is observed",
+      "adjust_escalation_threshold": "If too many/few escalations occur",
+      "rebalance_weights": "If certain branches dominate helping"
+    }
+  },
+  "anti_abuse_measures": {
+    "evidence_confidence_minimum": 0.1,
+    "diversity_factor_minimum": 0.1,
+    "witness_requirement_minimum": 1,
+    "max_earn_events_per_day": 10,
+    "max_spend_proposals_per_week": 3,
+    "comment": "Hard limits to prevent gaming and spam"
+  }
+}

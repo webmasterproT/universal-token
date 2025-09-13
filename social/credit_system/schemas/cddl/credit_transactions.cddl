@@ -1,0 +1,434 @@
+; Credit System CBOR Schemas
+; Implements credit transactions, earn/spend events, branch agreements
+
+; ===========================================
+; Credit System Core Types
+; ===========================================
+
+credit_amount = float32 .ge(0.0)        ; Non-negative credit amounts
+branch_id = tstr .size (1..64)          ; Branch identifier
+contract_id = tstr .size (1..128)       ; Contract identifier
+
+; ===========================================
+; Earn Events (Section 3)
+; ===========================================
+
+earn_event = {
+  ; Helper who performed the action
+  helper: cid,
+  
+  ; Action that was performed
+  action: earnable_action,
+  
+  ; Set of people helped (subject set S)
+  subject_set: [+ cid],
+  
+  ; Evidence confidence k ∈ [0,1]
+  evidence_confidence: float32 .ge(0.0) .le(1.0),
+  
+  ; Diversity factor ρ ∈ [0,1] 
+  diversity_factor: float32 .ge(0.0) .le(1.0),
+  
+  ; Calculated proximity score C(helper, S)
+  proximity_score: float32 .ge(0.0) .le(1.0),
+  
+  ; Average credits in helper's branch
+  branch_avg_credits: credit_amount,
+  
+  ; Calculated credit award
+  credit_award: credit_amount,
+  
+  ; When the event occurred
+  timestamp: timestamp,
+  
+  ; Witnesses for verification
+  witnesses: [+ cid],
+  
+  ; Helper's signature over canonical event bytes
+  signature: signature
+}
+
+earnable_action = {
+  ; Type of care labor performed
+  type: action_type,
+  
+  ; Base award for this action type (w_a)
+  base_award: credit_amount,
+  
+  ; Human-readable description
+  description: tstr .size (1..500),
+  
+  ; Optional evidence commitments
+  ? evidence_commitments: [+ evidence_commitment]
+}
+
+action_type = &(
+  mediation: 0,        ; Mediation with survivor-approved outcome
+  support_response: 1, ; Response to support request
+  replication: 2,      ; Data replication/pinning duty
+  moderation: 3,       ; Community moderation work
+  education: 4,        ; Teaching or training others
+  care_work: 5,        ; Direct care or assistance
+  infrastructure: 6,   ; System maintenance or improvement
+  other: 7            ; Other community-beneficial work
+)
+
+; ===========================================
+; Spend Events (Section 4)
+; ===========================================
+
+spend_event = {
+  ; Person requesting the spend
+  requester: cid,
+  
+  ; Type of spend
+  spend_type: spend_type,
+  
+  ; Amount of credits to burn
+  amount: credit_amount,
+  
+  ; Purpose/description of need
+  purpose: tstr .size (1..1000),
+  
+  ; Branch approval for this spend
+  branch_approval: branch_approval,
+  
+  ; When the spend was approved
+  timestamp: timestamp,
+  
+  ; Requester's signature
+  signature: signature
+}
+
+spend_type = &(
+  local: 0,      ; Local help request (c_local)
+  xbranch: 1,    ; Cross-branch escalation (c_xbranch)  
+  global: 2      ; Global escalation (c_global)
+)
+
+branch_approval = {
+  ; Branch that approved the spend
+  branch_id: branch_id,
+  
+  ; HER CIDs of voters
+  voters: [+ cid],
+  
+  ; Vote values (can be weighted stances)
+  votes: [+ float32],
+  
+  ; Participation rate |V|/|B|
+  participation_rate: float32 .ge(0.0) .le(1.0),
+  
+  ; Path diversity score
+  path_diversity_score: uint,
+  
+  ; Calculated trimmed mean
+  trimmed_mean: float32 .ge(0.0) .le(1.0),
+  
+  ; Whether approval was granted
+  approved: bool,
+  
+  ; When approval was granted
+  approval_timestamp: timestamp,
+  
+  ; Branch signature over approval
+  branch_signature: signature
+}
+
+; ===========================================
+; Credit Balances
+; ===========================================
+
+credit_balance = {
+  ; Human this balance belongs to
+  human: cid,
+  
+  ; Current credit balance
+  balance: credit_amount,
+  
+  ; Last epoch when balance was updated
+  last_updated_epoch: uint,
+  
+  ; Recent earn events (for audit)
+  recent_earnings: [* earn_event_summary],
+  
+  ; Recent spend events (for audit)
+  recent_spends: [* spend_event_summary]
+}
+
+earn_event_summary = {
+  amount: credit_amount,
+  action_type: action_type,
+  timestamp: timestamp,
+  ? subject_count: uint
+}
+
+spend_event_summary = {
+  amount: credit_amount,
+  spend_type: spend_type,
+  timestamp: timestamp
+}
+
+; ===========================================
+; Cross-Branch Escalation (Section 5)
+; ===========================================
+
+escalation_request = {
+  ; Issue this escalation addresses
+  issue_id: cid,
+  
+  ; Branch requesting escalation
+  requesting_branch: branch_id,
+  
+  ; Calculated escalation score
+  escalation_score: escalation_score_result,
+  
+  ; Selected neighbor branches
+  neighbor_selection: [+ neighbor_score_result],
+  
+  ; Proposed contract terms
+  contract_proposal: cross_branch_contract,
+  
+  ; Branch approval for escalation spend
+  branch_approval: branch_approval,
+  
+  ; When escalation was requested
+  timestamp: timestamp,
+  
+  ; Requester signature
+  signature: signature
+}
+
+escalation_score_result = {
+  branch_id: branch_id,
+  issue_id: cid,
+  local_impact: float32,
+  need_pressure: float32,
+  diversity_penalty: float32,
+  total_score: float32,
+  triggered: bool
+}
+
+neighbor_score_result = {
+  branch_id: branch_id,
+  connectedness: float32 .ge(0.0) .le(1.0),
+  scarcity_bonus: float32 .ge(0.0) .le(1.0),
+  load_penalty: float32 .ge(0.0) .le(1.0),
+  total_score: float32,
+  recommended: bool
+}
+
+cross_branch_contract = {
+  ; Unique contract identifier
+  contract_id: contract_id,
+  
+  ; Requesting branch
+  requesting_branch: branch_id,
+  
+  ; Branches that will help
+  helping_branches: [+ branch_id],
+  
+  ; Issue being addressed
+  issue_id: cid,
+  
+  ; Subject set (people affected)
+  scope: [+ cid],
+  
+  ; Required tasks/actions
+  tasks: [+ contract_task],
+  
+  ; Contract duration in hours
+  timebox_hours: uint,
+  
+  ; Evidence requirements
+  evidence_requirements: tstr .size (1..500),
+  
+  ; Credit rewards for helpers
+  credit_rewards: credit_amount,
+  
+  ; Current contract status
+  status: contract_status,
+  
+  ; Branch signatures (approvals)
+  signatures: {* branch_id => signature},
+  
+  ; Contract creation time
+  created_at: timestamp,
+  
+  ; Contract expiration time
+  expires_at: timestamp
+}
+
+contract_task = {
+  ; Task description
+  description: tstr .size (1..300),
+  
+  ; Who is responsible
+  ? responsible_party: cid,
+  
+  ; Success criteria
+  success_criteria: tstr .size (1..200),
+  
+  ; Task status
+  status: task_status
+}
+
+contract_status = &(
+  proposed: 0,   ; Contract proposed, awaiting signatures
+  active: 1,     ; Contract active, work in progress
+  completed: 2,  ; Contract successfully completed
+  failed: 3,     ; Contract failed or expired
+  disputed: 4    ; Contract outcome disputed
+)
+
+task_status = &(
+  pending: 0,     ; Task not yet started
+  in_progress: 1, ; Task being worked on
+  completed: 2,   ; Task completed
+  blocked: 3      ; Task blocked by external factors
+)
+
+; ===========================================
+; Branch Management
+; ===========================================
+
+branch_definition = {
+  ; Branch identifier
+  id: branch_id,
+  
+  ; Current branch members
+  members: [+ cid],
+  
+  ; Average credit balance
+  avg_credits: credit_amount,
+  
+  ; Stance diversity score ρ ∈ [0,1]
+  diversity_score: float32 .ge(0.0) .le(1.0),
+  
+  ; Count of unfulfilled help requests
+  open_needs_count: uint,
+  
+  ; Current load (active contracts)
+  current_load: uint,
+  
+  ; Optional location hint
+  ? location_hint: tstr .size (1..100),
+  
+  ; Branch formation timestamp
+  formed_at: timestamp,
+  
+  ; Member signatures
+  member_signatures: {* cid => signature}
+}
+
+branch_credit_agreement = {
+  ; Agreement between branches for credit-based collaboration
+  agreement_id: tstr,
+  
+  ; Participating branches
+  branches: [+ branch_id],
+  
+  ; Agreement type
+  type: agreement_type,
+  
+  ; Terms and conditions
+  terms: tstr .size (1..2000),
+  
+  ; Credit allocations/commitments
+  credit_commitments: {* branch_id => credit_amount},
+  
+  ; Agreement duration
+  ? duration_hours: uint,
+  
+  ; Branch approvals
+  approvals: {* branch_id => branch_approval},
+  
+  ; Agreement timestamp
+  timestamp: timestamp
+}
+
+agreement_type = &(
+  mutual_aid: 0,      ; Mutual aid pact
+  resource_sharing: 1, ; Resource sharing agreement
+  escalation_support: 2, ; Cross-branch escalation support
+  infrastructure: 3   ; Joint infrastructure maintenance
+)
+
+; ===========================================
+; System Parameters
+; ===========================================
+
+credit_parameters = {
+  ; Per-human credit cap
+  C_max: credit_amount,
+  
+  ; Global issuance cap per epoch
+  I_max_per_epoch: credit_amount,
+  
+  ; Global spend cap per epoch
+  S_max_per_epoch: credit_amount,
+  
+  ; Earning multipliers
+  beta0: float32,     ; Base multiplier
+  beta1: float32,     ; Proximity multiplier
+  theta: float32,     ; Scarcity midpoint
+  
+  ; Spend costs
+  c_local: credit_amount,
+  c_xbranch: credit_amount,
+  c_global: credit_amount,
+  
+  ; Decay parameters
+  H_c_days: uint,     ; Half-life in days
+  delta: float32,     ; Decay base (0.5 for half-life)
+  
+  ; Quorum parameters
+  alpha: float32,     ; Required participation rate
+  q: uint,           ; Required path diversity
+  tau: float32,      ; Required approval threshold
+  
+  ; Escalation parameters
+  gamma1: float32,   ; Local impact weight
+  gamma2: float32,   ; Need pressure weight
+  gamma3: float32,   ; Diversity penalty weight
+  Theta_esc: float32, ; Escalation threshold
+  
+  ; Neighbor selection parameters
+  lambda1: float32,   ; Connectedness weight
+  lambda2: float32,   ; Scarcity bonus weight
+  lambda3: float32,   ; Load penalty weight
+  max_neighbors: uint ; Maximum neighbors to invite
+}
+
+; ===========================================
+; Epoch Conservation Tracking
+; ===========================================
+
+epoch_credit_summary = {
+  ; Epoch identifier
+  epoch_id: uint,
+  
+  ; Total credits earned this epoch
+  total_earned: credit_amount,
+  
+  ; Total credits spent this epoch
+  total_spent: credit_amount,
+  
+  ; Whether within issuance cap
+  within_issuance_cap: bool,
+  
+  ; Whether within spend cap
+  within_spend_cap: bool,
+  
+  ; Unused issuance capacity
+  unused_issuance: credit_amount,
+  
+  ; Active population count
+  active_population: uint,
+  
+  ; Dynamic caps for this epoch
+  dynamic_issuance_cap: credit_amount,
+  
+  ; Epoch summary timestamp
+  timestamp: timestamp
+}
