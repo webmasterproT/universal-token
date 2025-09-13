@@ -1,0 +1,59 @@
+{
+  "name": "universal-token",
+  "version": "0.1.0",
+  "description": "Human–AI Co-Creation Ecology: Proof of Unique Human Existence",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.11",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9",
+  "workspaces": [
+    "cli",
+    "services/*",
+    "interfaces/*",
+    "crypto/libs/js"
+  ],
+  "scripts": {
+    "dev": "pnpm --recursive dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "format": "prettier -w .",
+    "typecheck": "pnpm --recursive typecheck",
+    "check:deps": "pnpm dlx npm-check-updates -u && pnpm install",
+    "audit": "pnpm audit --prod",
+    "clean": "rm -rf dist/ build/ node_modules/ **/node_modules/"
+  },
+  "keywords": [
+    "human-proof",
+    "identity",
+    "cryptography",
+    "cbor",
+    "merkle-tree",
+    "responsibility-network",
+    "golden-ratio",
+    "trust-dial",
+    "ipfs",
+    "arweave"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tiation-repos/universal-token.git"
+  },
+  "license": "Apache-2.0 OR CC-BY-SA-4.0",
+  "author": "tiation <tiation@example.com>",
+  "devDependencies": {
+    "@types/node": "^20",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "eslint-plugin-import": "^2",
+    "eslint-plugin-security": "^3",
+    "eslint-plugin-unicorn": "^55",
+    "prettier": "^3",
+    "typescript": "^5.6",
+    "vitest": "^2.0"
+  }
+}

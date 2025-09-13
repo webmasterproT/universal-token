@@ -1,0 +1,116 @@
+# Dependencies
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# Secrets and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+/ops/keys/*
+!/ops/keys/README.md
+/config/secrets.*
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Rust
+target/
+Cargo.lock
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+*.egg-info
+
+# Blockchain artifacts
+artifacts/
+cache/
+node_modules
+typechain/
+typechain-types/
+
+# Local development data
+/data/humans/*/
+/data/epochs/*.mmr
+/data/mirrors/ipfs/*.car
+
+# Generated assets (should be reproducible)
+/assets/wallet/apple/*.pkpass
+/assets/wallet/google/*.jwt
+/assets/qr/*.png

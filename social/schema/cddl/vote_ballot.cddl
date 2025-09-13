@@ -1,0 +1,169 @@
+; Vote Ballot Schema
+; Cryptographic voting with stance ∈ [-1, +1]
+
+vote-ballot = {
+  ; The proposal being voted on (CID)
+  proposal: cid,
+  
+  ; Voter's stance from -1.0 (strong no) to +1.0 (strong yes)
+  ; 0.0 represents neutral/abstain
+  stance: float16 .ge(-1.0) .le(1.0),
+  
+  ; Voter's public key (for verification)
+  voter_pubkey: public_key,
+  
+  ; When the vote was cast
+  timestamp: timestamp,
+  
+  ; Optional reasoning (private or public based on voter choice)
+  ? reasoning: vote-reasoning,
+  
+  ; Cryptographic signature over canonical ballot bytes
+  signature: signature
+}
+
+vote-reasoning = {
+  ; Whether reasoning is public or private
+  visibility: reasoning-visibility,
+  
+  ; The reasoning text (encrypted if private)
+  content: tstr .size (1..2000),
+  
+  ; If private, encryption details
+  ? encryption: reasoning-encryption
+}
+
+reasoning-visibility = &(
+  public: 0,     ; Visible to all
+  circles: 1,    ; Visible to trusted circles only
+  private: 2     ; Encrypted, only voter can decrypt
+)
+
+reasoning-encryption = {
+  ; Encryption algorithm used
+  algorithm: tstr,
+  
+  ; Initialization vector
+  iv: bytes,
+  
+  ; Encrypted content hash for verification
+  content_hash: bytes .size 32
+}
+
+; Vote proposal structure
+vote-proposal = {
+  ; Unique proposal identifier
+  proposal_id: cid,
+  
+  ; Proposal title and question
+  title: tstr .size (1..200),
+  question: tstr .size (1..2000),
+  
+  ; Optional detailed context document (CID reference)
+  ? context_doc: cid,
+  
+  ; Proposal metadata
+  metadata: proposal-metadata,
+  
+  ; Merkle root of eligible voters
+  voters_root: merkle_root,
+  
+  ; Merkle root of cast ballots (updated as votes come in)
+  ballots_root: merkle_root,
+  
+  ; Current aggregated result
+  ? result: vote-result,
+  
+  ; Proposal creator signature
+  signature: signature
+}
+
+proposal-metadata = {
+  ; When voting opens
+  voting_opens: timestamp,
+  
+  ; When voting closes
+  voting_closes: timestamp,
+  
+  ; Minimum participation for valid result
+  quorum_threshold: float16 .ge(0.0) .le(1.0),
+  
+  ; Required consensus level (simple majority = 0.51)
+  consensus_threshold: float16 .ge(0.0) .le(1.0),
+  
+  ; Proposal severity/impact level
+  severity: float16 .ge(0.0) .le(1.0),
+  
+  ; Whether this requires path-diverse verification
+  requires_diversity: bool,
+  
+  ; Proposal scope (affects quorum calculation)
+  scope: proposal-scope
+}
+
+proposal-scope = &(
+  global: 0,        ; Affects entire network
+  regional: 1,      ; Affects specific region
+  community: 2,     ; Affects specific community
+  local: 3         ; Affects small group
+)
+
+; Aggregated vote result with robustness
+vote-result = {
+  ; Total eligible voters
+  total_eligible: uint,
+  
+  ; Total votes cast
+  total_votes: uint,
+  
+  ; Participation rate
+  participation_rate: float16,
+  
+  ; Raw mean of stances
+  raw_mean: float16,
+  
+  ; Trimmed mean (outliers excluded)
+  trimmed_mean: float16,
+  
+  ; Standard deviation
+  std_deviation: float16,
+  
+  ; Diversity metrics
+  diversity: vote-diversity,
+  
+  ; Whether result meets quorum and consensus thresholds
+  is_valid: bool,
+  is_passing: bool,
+  
+  ; When result was calculated
+  calculated_at: timestamp
+}
+
+vote-diversity = {
+  ; Path diversity score (independent verification paths)
+  path_diversity: float16 .ge(0.0) .le(1.0),
+  
+  ; Geographic diversity (if relevant)
+  ? geographic_diversity: float16 .ge(0.0) .le(1.0),
+  
+  ; Connectedness diversity (different network clusters)
+  network_diversity: float16 .ge(0.0) .le(1.0),
+  
+  ; Temporal diversity (votes spread over time)
+  temporal_diversity: float16 .ge(0.0) .le(1.0)
+}
+
+; Vote receipt for verification
+vote-receipt = {
+  ; The ballot that was cast
+  ballot: vote-ballot,
+  
+  ; Merkle proof of inclusion in ballots tree
+  inclusion_proof: [+ merkle_node],
+  
+  ; Receipt timestamp
+  receipt_timestamp: timestamp,
+  
+  ; System signature confirming receipt
+  system_signature: signature
+}

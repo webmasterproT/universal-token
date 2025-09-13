@@ -1,0 +1,318 @@
+; Universal Token CBOR Data Model
+; Concise Data Definition Language (CDDL) Specification
+; RFC 8610 - Concise Data Definition Language (CDDL)
+
+; ===========================================
+; Core Types
+; ===========================================
+
+timestamp = uint                    ; Unix timestamp (seconds since epoch)
+cid = bytes                        ; CIDv1 with BLAKE3 multihash
+merkle_root = bytes .size 32       ; 256-bit BLAKE3 hash
+public_key = bytes .size 32        ; Ed25519 public key (32 bytes)
+signature = bytes .size 64         ; Ed25519 signature (64 bytes)
+bls_public_key = bytes .size 48    ; BLS12-381 G1 public key (48 bytes)
+bls_signature = bytes .size 96     ; BLS12-381 G1 signature (96 bytes)
+
+; ===========================================
+; Human Existence Record (HER)
+; ===========================================
+
+HER = {
+  ; Protocol version for forward compatibility
+  version: uint .default 1,
+  
+  ; Creation timestamp (immutable)
+  created_at: timestamp,
+  
+  ; Owner's cryptographic keys (at least one required)
+  owner_keys: [+ public_key],
+  
+  ; Sponsor network requirements
+  sponsors: SponsorSet,
+  
+  ; Human-readable personalization data
+  personalization: IdentityData,
+  
+  ; Cryptographic responsibility commitments
+  responsibility: ResponsibilityData,
+  
+  ; Owner signatures over canonical HER bytes
+  signatures: [+ signature]
+}
+
+SponsorSet = {
+  ; Number of sponsors required for validation (1-10)
+  required_count: 1..10,
+  
+  ; References to sponsor HER CIDs
+  sponsor_refs: [+ cid]
+}
+
+IdentityData = {
+  ; Single line human identifier (no newlines)
+  identity_line: tstr .size (1..256),
+  
+  ; Optional commitment to biometric/photo hash
+  ? bio_hash: bytes .size 32,
+  
+  ; Optional geographic region (no precise location)
+  ? location_region: tstr .size (1..100),
+  
+  ; Optional validity time range
+  ? timestamp_range: [timestamp, timestamp]
+}
+
+ResponsibilityData = {
+  ; Layer 1 responsibility commitment (opaque bytes)
+  layer1: bytes .size 32,
+  
+  ; Optional Merkle roots for multi-layer responsibility
+  ? ripple_roots: [+ merkle_root]
+}
+
+; ===========================================
+; Proof Capsule
+; ===========================================
+
+Capsule = {
+  ; Canonical CBOR bytes of the HER
+  her_bytes: bytes,
+  
+  ; CID of the HER for content addressing
+  her_cid: cid,
+  
+  ; Merkle Mountain Range inclusion proof
+  mmr_proof: [+ MerkleNode],
+  
+  ; Epoch header containing consensus information
+  epoch_header: EpochHeader,
+  
+  ; Aggregated BLS signature from witness roster
+  bls_signature: bls_signature,
+  
+  ; Public keys of the signing witnesses
+  roster_pub: [+ bls_public_key]
+}
+
+MerkleNode = {
+  ; Hash of this node
+  hash: merkle_root,
+  
+  ; Position in the tree (for verification)
+  position: uint,
+  
+  ; Whether this is a left or right sibling
+  is_left: bool
+}
+
+; ===========================================
+; Epoch Structure
+; ===========================================
+
+EpochHeader = {
+  ; Sequential epoch identifier
+  epoch_id: uint,
+  
+  ; Root hash of the Merkle Mountain Range
+  mmr_root: merkle_root,
+  
+  ; Optional reference to previous epoch
+  ? prev_epoch: bytes .size 32,
+  
+  ; Number of witnesses that signed this epoch
+  witness_count: uint,
+  
+  ; Epoch creation timestamp
+  created_at: timestamp,
+  
+  ; External blockchain anchoring information
+  chain_anchors: [* ChainAnchor]
+}
+
+ChainAnchor = {
+  ; Human-readable chain identifier
+  chain_id: tstr,
+  
+  ; Block height where epoch was anchored
+  block_height: uint,
+  
+  ; Transaction hash containing the epoch root
+  tx_hash: bytes .size 32,
+  
+  ; Number of confirmations received
+  confirmation_count: uint
+}
+
+; ===========================================
+; Attestations & Issues
+; ===========================================
+
+Attestation = {
+  ; Version for compatibility
+  version: uint .default 1,
+  
+  ; Attestation type
+  type: AttestationType,
+  
+  ; CID of the subject being attested to
+  subject_cid: cid,
+  
+  ; CID of the attester (sponsor)
+  attester_cid: cid,
+  
+  ; Attestation content and metadata
+  content: AttestationContent,
+  
+  ; Attester's signature
+  signature: signature
+}
+
+AttestationType = &(
+  sponsor: 1,           ; Sponsor attestation for new HER
+  challenge: 2,         ; Challenge-response verification
+  revocation: 3,        ; Revocation of previous attestation
+  endorsement: 4        ; Additional endorsement
+)
+
+AttestationContent = {
+  ; Human-readable statement
+  statement: tstr,
+  
+  ; Structured claims
+  ? claims: {* tstr => any},
+  
+  ; Expiration timestamp (optional)
+  ? expires_at: timestamp,
+  
+  ; Challenge nonce for verification
+  ? challenge_nonce: bytes .size 32
+}
+
+; ===========================================
+; Issues & Disputes
+; ===========================================
+
+Issue = {
+  ; Issue protocol version
+  version: uint .default 1,
+  
+  ; Issue type classification
+  type: IssueType,
+  
+  ; Subject of the issue
+  subject_cid: cid,
+  
+  ; Issue reporter
+  reporter_cid: cid,
+  
+  ; Issue details
+  content: IssueContent,
+  
+  ; Reporter signature
+  signature: signature
+}
+
+IssueType = &(
+  duplicate: 1,         ; Duplicate human claim
+  invalid: 2,           ; Invalid data or signatures
+  abuse: 3,            ; System abuse or spam
+  privacy: 4            ; Privacy violation
+)
+
+IssueContent = {
+  ; Human-readable description
+  description: tstr,
+  
+  ; Structured evidence
+  ? evidence: [* any],
+  
+  ; Severity level (1-5)
+  severity: 1..5,
+  
+  ; Suggested resolution
+  ? resolution: tstr
+}
+
+; ===========================================
+; Ripple Vector
+; ===========================================
+
+RippleVector = {
+  ; Subject HER CID
+  subject_cid: cid,
+  
+  ; Responsibility weights by CID
+  responsibilities: {* cid => float},
+  
+  ; Computation depth used
+  depth: uint,
+  
+  ; Timestamp of calculation
+  calculated_at: timestamp,
+  
+  ; Optional connectedness metrics
+  ? metrics: RippleMetrics
+}
+
+RippleMetrics = {
+  ; Overall connectedness score (0-1)
+  connectedness: float,
+  
+  ; Diversity of responsibility distribution
+  diversity: float,
+  
+  ; Network clustering coefficient
+  clustering: float,
+  
+  ; Maximum responsibility chain length
+  max_chain_length: uint
+}
+
+; ===========================================
+; Meeting Records
+; ===========================================
+
+Meeting = {
+  ; Meeting protocol version
+  version: uint .default 1,
+  
+  ; Meeting identifier
+  meeting_id: tstr,
+  
+  ; Participants (HER CIDs)
+  participants: [+ cid],
+  
+  ; Meeting metadata
+  metadata: MeetingMetadata,
+  
+  ; Participant signatures (same order as participants)
+  signatures: [+ signature]
+}
+
+MeetingMetadata = {
+  ; Meeting purpose/title
+  title: tstr,
+  
+  ; Scheduled start time
+  start_time: timestamp,
+  
+  ; Actual duration in seconds
+  ? duration: uint,
+  
+  ; Geographic location (optional, coarse)
+  ? location: tstr,
+  
+  ; Meeting type
+  type: MeetingType,
+  
+  ; Additional structured data
+  ? extra: {* tstr => any}
+}
+
+MeetingType = &(
+  verification: 1,      ; Identity verification meeting
+  social: 2,           ; Social gathering
+  business: 3,         ; Business/professional meeting
+  ceremony: 4          ; Ceremonial event
+)

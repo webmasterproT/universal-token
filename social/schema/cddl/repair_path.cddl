@@ -1,0 +1,293 @@
+; Repair Path Schema
+; Survivor-controlled healing and accountability processes
+
+repair-path = {
+  ; Unique repair path identifier
+  repair_id: cid,
+  
+  ; The issue this repair path addresses
+  issue_id: cid,
+  
+  ; Who controls this repair path (usually the survivor)
+  controller: cid,
+  
+  ; Current status of repair
+  status: repair-status,
+  
+  ; Ordered steps in the repair process
+  steps: [+ repair-step],
+  
+  ; People involved in the repair process
+  participants: repair-participants,
+  
+  ; When repair path was created
+  created_at: timestamp,
+  
+  ; When repair was last updated
+  updated_at: timestamp,
+  
+  ; Controller's signature
+  signature: signature
+}
+
+repair-status = {
+  ; Current phase
+  phase: repair-phase,
+  
+  ; Overall progress (0.0 to 1.0)
+  progress: float16 .ge(0.0) .le(1.0),
+  
+  ; Whether repair is currently active
+  active: bool,
+  
+  ; Completion criteria met
+  completion_criteria_met: bool,
+  
+  ; Next scheduled check-in
+  ? next_checkin: timestamp
+}
+
+repair-phase = &(
+  design: 0,        ; Designing the repair process
+  consent: 1,       ; Getting consent from all participants
+  active: 2,        ; Actively working through repair steps
+  review: 3,        ; Reviewing progress and outcomes
+  monitoring: 4,    ; Post-repair monitoring period
+  complete: 5,      ; Repair fully complete
+  paused: 6,        ; Temporarily paused by controller
+  abandoned: 7      ; Repair process abandoned
+)
+
+repair-step = {
+  ; Step identifier within this repair path
+  step_id: uint,
+  
+  ; Step description
+  description: tstr .size (1..500),
+  
+  ; Who is responsible for this step
+  responsible_party: cid,
+  
+  ; What actions are required
+  required_actions: [+ repair-action],
+  
+  ; Success criteria for this step
+  success_criteria: tstr .size (1..300),
+  
+  ; Deadline for completion
+  ? deadline: timestamp,
+  
+  ; Current step status
+  status: step-status,
+  
+  ; Evidence of completion
+  ? completion_evidence: [+ evidence-commitment]
+}
+
+repair-action = {
+  ; Action type
+  type: action-type,
+  
+  ; Specific description
+  description: tstr .size (1..400),
+  
+  ; Whether this action is required or optional
+  required: bool,
+  
+  ; Success metrics for this action
+  ? success_metrics: tstr .size (1..200)
+}
+
+action-type = &(
+  apology: 0,           ; Acknowledgment and apology
+  education: 1,         ; Learning about impact/harm
+  behavior_change: 2,   ; Committing to specific behavior changes
+  community_service: 3, ; Contributing positively to community
+  counseling: 4,        ; Professional counseling/therapy
+  mediation: 5,         ; Mediated conversation
+  restitution: 6,       ; Making amends (time/resources/etc.)
+  boundaries: 7,        ; Agreeing to specific boundaries
+  monitoring: 8,        ; Accepting monitoring of behavior
+  other: 9             ; Other agreed-upon action
+)
+
+step-status = &(
+  pending: 0,      ; Not yet started
+  in_progress: 1,  ; Currently being worked on
+  completed: 2,    ; Successfully completed
+  overdue: 3,      ; Past deadline, not complete
+  disputed: 4,     ; Disagreement about completion
+  skipped: 5       ; Skipped with controller consent
+)
+
+repair-participants = {
+  ; The person who caused harm (if participating)
+  ? subject: cid,
+  
+  ; The person(s) harmed
+  affected: [+ cid],
+  
+  ; Mediators or facilitators
+  ? facilitators: [+ cid],
+  
+  ; Community witnesses/supporters
+  ? supporters: [+ cid],
+  
+  ; External professionals (counselors, etc.)
+  ? professionals: [+ external-participant]
+}
+
+external-participant = {
+  ; Type of external participant
+  type: external-type,
+  
+  ; Identifier (not necessarily a HER CID)
+  identifier: tstr,
+  
+  ; Role in the repair process
+  role: tstr .size (1..200),
+  
+  ; Consent status
+  consented: bool
+}
+
+external-type = &(
+  counselor: 0,     ; Mental health professional
+  mediator: 1,      ; Professional mediator
+  advocate: 2,      ; Victim advocate
+  educator: 3,      ; Educational specialist
+  legal: 4,         ; Legal advisor
+  community: 5,     ; Community leader/elder
+  other: 6         ; Other type of external participant
+)
+
+; Progress report for repair path
+repair-progress = {
+  ; The repair path being reported on
+  repair_id: cid,
+  
+  ; Who is making this progress report
+  reporter: cid,
+  
+  ; Steps that have been completed since last report
+  completed_steps: [+ uint],
+  
+  ; Current challenges or blockers
+  ? challenges: tstr .size (1..1000),
+  
+  ; Requested modifications to repair plan
+  ? modification_requests: [+ modification-request],
+  
+  ; Overall assessment of progress
+  progress_assessment: progress-assessment,
+  
+  ; When this progress report was made
+  reported_at: timestamp,
+  
+  ; Reporter's signature
+  signature: signature
+}
+
+modification-request = {
+  ; What kind of modification is requested
+  type: modification-type,
+  
+  ; Specific description of requested change
+  description: tstr .size (1..500),
+  
+  ; Justification for the change
+  justification: tstr .size (1..500),
+  
+  ; Whether this is urgent
+  urgent: bool
+}
+
+modification-type = &(
+  add_step: 0,      ; Add new repair step
+  remove_step: 1,   ; Remove existing step
+  modify_step: 2,   ; Modify existing step
+  extend_deadline: 3, ; Extend deadline
+  change_participant: 4, ; Change who's responsible
+  pause: 5,         ; Request to pause repair
+  accelerate: 6     ; Request to speed up process
+)
+
+progress-assessment = {
+  ; Overall satisfaction with progress (survivor's perspective)
+  satisfaction: float16 .ge(0.0) .le(1.0),
+  
+  ; Whether the person causing harm is engaging genuinely
+  genuine_engagement: bool,
+  
+  ; Whether the repair is having the desired impact
+  effective_impact: bool,
+  
+  ; Confidence that repair will be successful
+  confidence: float16 .ge(0.0) .le(1.0)
+}
+
+; Repair completion record
+repair-completion = {
+  ; The completed repair path
+  repair_id: cid,
+  
+  ; Who is certifying completion (usually survivor)
+  certifier: cid,
+  
+  ; Final assessment of repair outcomes
+  outcomes: repair-outcomes,
+  
+  ; Ongoing monitoring requirements
+  ? monitoring_requirements: monitoring-plan,
+  
+  ; When repair was completed
+  completed_at: timestamp,
+  
+  ; Certifier's signature
+  signature: signature
+}
+
+repair-outcomes = {
+  ; Whether repair goals were fully achieved
+  goals_achieved: bool,
+  
+  ; Satisfaction with repair process
+  process_satisfaction: float16 .ge(0.0) .le(1.0),
+  
+  ; Satisfaction with outcomes
+  outcome_satisfaction: float16 .ge(0.0) .le(1.0),
+  
+  ; Whether future similar behavior is less likely
+  recurrence_likelihood: float16 .ge(0.0) .le(1.0),
+  
+  ; Key lessons learned
+  lessons_learned: tstr .size (1..1000),
+  
+  ; Recommendations for future similar cases
+  ? recommendations: tstr .size (1..1000)
+}
+
+monitoring-plan = {
+  ; Duration of monitoring period
+  duration_months: uint,
+  
+  ; Frequency of check-ins
+  checkin_frequency: checkin-frequency,
+  
+  ; What behaviors/metrics to monitor
+  monitoring_criteria: [+ tstr],
+  
+  ; Who will conduct monitoring
+  monitors: [+ cid],
+  
+  ; Escalation plan if problems recur
+  escalation_plan: tstr .size (1..500)
+}
+
+checkin-frequency = &(
+  weekly: 0,
+  biweekly: 1,
+  monthly: 2,
+  quarterly: 3,
+  as_needed: 4
+)

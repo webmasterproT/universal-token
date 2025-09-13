@@ -1,0 +1,72 @@
+site_name: Universal Token (⊙)
+site_description: Human–AI Co-Creation Ecology - Proof of Unique Human Existence
+site_url: https://tiation-repos.github.io/universal-token
+repo_url: https://github.com/tiation-repos/universal-token
+repo_name: tiation-repos/universal-token
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - Protocol:
+    - RFC Specification: spec/uhgl-rfc.md
+    - Data Model: spec/data-model.cddl
+    - Cryptography: spec/crypto.md
+  - Operations:
+    - Anchoring: ops/anchoring.md
+    - Replication: ops/replication.md
+    - Key Management: ops/key-management.md
+  - User Experience:
+    - Trust Dial: ux/trust-dial-spec.md
+    - Wallet Guidelines: ux/wallet-pass-guidelines.md
+
+plugins:
+  - search
+  - git-revision-date-localized
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: cddl
+          class: cddl
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tiation-repos/universal-token
+  generator: false

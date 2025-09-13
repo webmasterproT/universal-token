@@ -1,0 +1,235 @@
+; Issue Schema
+; Safety/harm reporting with headers + commitments, not raw evidence
+
+issue-header = {
+  ; Unique issue identifier
+  issue_id: cid,
+  
+  ; Subject of the issue (person/content/behavior being reported)
+  subject: cid,
+  
+  ; Reporter (who filed the issue)
+  reporter: cid,
+  
+  ; Issue classification
+  type: issue-type,
+  
+  ; Severity level s ∈ [0, 1]
+  severity: float16 .ge(0.0) .le(1.0),
+  
+  ; Confidence level k ∈ [0, 1] (reporter's certainty)
+  confidence: float16 .ge(0.0) .le(1.0),
+  
+  ; Merkle root of evidence commitments (not raw evidence)
+  evidence_root: merkle_root,
+  
+  ; Merkle root of witness attestations
+  ? witnesses_root: merkle_root,
+  
+  ; Scope of impact (affects safety tier calculation)
+  scope: issue-scope,
+  
+  ; When the issue was reported
+  reported_at: timestamp,
+  
+  ; Current status of the issue
+  status: issue-status,
+  
+  ; Reporter's signature
+  signature: signature
+}
+
+issue-type = &(
+  safety: 0,        ; Physical or emotional safety concern
+  coercion: 1,      ; Manipulation, pressure, or forcing
+  misinfo: 2,       ; Misinformation or deceptive content
+  spam: 3,          ; Unwanted repetitive content
+  harassment: 4,    ; Persistent unwanted contact
+  impersonation: 5, ; False identity claims
+  privacy: 6,       ; Unauthorized sharing of private info
+  other: 7          ; Other community guideline violation
+)
+
+issue-scope = {
+  ; How many people are affected
+  affected_count: uint,
+  
+  ; Geographic scope (if relevant)
+  ? geographic: geographic-scope,
+  
+  ; Network scope (connectedness radius)
+  network_radius: uint,
+  
+  ; Temporal scope (ongoing vs isolated incident)
+  temporal: temporal-scope
+}
+
+geographic-scope = &(
+  local: 0,      ; Single city/region
+  national: 1,   ; Single country
+  global: 2      ; Multiple countries
+)
+
+temporal-scope = &(
+  isolated: 0,   ; Single incident
+  recurring: 1,  ; Multiple incidents over time
+  ongoing: 2     ; Continuous behavior
+)
+
+issue-status = {
+  ; Current phase of issue lifecycle
+  phase: issue-phase,
+  
+  ; Time when status was last updated
+  updated_at: timestamp,
+  
+  ; Whether issue is currently having active impact
+  active_impact: bool,
+  
+  ; Decay timer (for automatic impact reduction)
+  ? decay_timer: decay-timer,
+  
+  ; Next review/check-in time
+  ? next_review: timestamp
+}
+
+issue-phase = &(
+  reported: 0,    ; Just reported, under initial review
+  verified: 1,    ; Sufficient evidence/witnesses confirmed
+  repair: 2,      ; Repair process underway
+  monitoring: 3,  ; Repair complete, monitoring for recurrence
+  resolved: 4,    ; Issue fully resolved
+  disputed: 5     ; Significant disagreement about issue
+)
+
+decay-timer = {
+  ; Half-life for automatic impact reduction
+  half_life_hours: uint,
+  
+  ; When decay started
+  started_at: timestamp,
+  
+  ; Original impact level at start of decay
+  initial_impact: float16 .ge(0.0) .le(1.0)
+}
+
+; Evidence commitment (not raw evidence)
+evidence-commitment = {
+  ; Commitment type
+  type: evidence-type,
+  
+  ; Hash commitment to actual evidence
+  commitment: bytes .size 32,
+  
+  ; Optional sealed (encrypted) evidence reference
+  ? sealed_ref: sealed-evidence-ref,
+  
+  ; When evidence was committed
+  committed_at: timestamp,
+  
+  ; Committer's signature
+  signature: signature
+}
+
+evidence-type = &(
+  testimony: 0,   ; Written account of events
+  screenshot: 1,  ; Image evidence
+  log: 2,         ; System/chat logs
+  witness: 3,     ; Third-party testimony
+  pattern: 4,     ; Pattern of behavior over time
+  context: 5      ; Background context information
+)
+
+sealed-evidence-ref = {
+  ; Encryption algorithm used
+  algorithm: tstr,
+  
+  ; Storage location (IPFS CID, etc.)
+  storage_ref: cid,
+  
+  ; Decryption controlled by survivor
+  access_control: access-control
+}
+
+access-control = {
+  ; Who can decrypt (list of public keys)
+  authorized_keys: [+ public_key],
+  
+  ; Threshold for multi-sig decryption
+  ? threshold: uint,
+  
+  ; Expiration time for access
+  ? expires_at: timestamp
+}
+
+; Witness attestation
+witness-attestation = {
+  ; The issue being witnessed
+  issue_id: cid,
+  
+  ; Witness identity
+  witness: cid,
+  
+  ; What the witness is attesting to
+  attestation: witness-claim,
+  
+  ; Witness confidence level
+  confidence: float16 .ge(0.0) .le(1.0),
+  
+  ; When attestation was made
+  attested_at: timestamp,
+  
+  ; Witness signature
+  signature: signature
+}
+
+witness-claim = {
+  ; Type of witnessing
+  claim_type: witness-type,
+  
+  ; Specific details of what was witnessed
+  details: tstr .size (1..1000),
+  
+  ; Whether witness has additional sealed evidence
+  ? has_evidence: bool
+}
+
+witness-type = &(
+  direct: 0,     ; Directly observed the incident
+  pattern: 1,    ; Observed pattern of behavior over time
+  impact: 2,     ; Witnessed impact on affected person
+  context: 3,    ; Can provide relevant context
+  similar: 4     ; Experienced similar incident from same person
+)
+
+; Issue annotation (community response)
+issue-annotation = {
+  ; The issue being annotated
+  issue_id: cid,
+  
+  ; Annotator identity
+  annotator: cid,
+  
+  ; Type of annotation
+  annotation_type: annotation-type,
+  
+  ; Annotation content
+  content: tstr .size (1..2000),
+  
+  ; Supporting evidence commitments
+  ? evidence_commitments: [+ evidence-commitment],
+  
+  ; When annotation was made
+  annotated_at: timestamp,
+  
+  ; Annotator signature
+  signature: signature
+}
+
+annotation-type = &(
+  support: 0,        ; Supporting the issue report
+  counter: 1,        ; Providing counter-evidence
+  context: 2,        ; Adding relevant context
+  process: 3,        ; Commenting on resolution process
+  update: 4          ; Status update on situation
+)

@@ -1,0 +1,80 @@
+; Pairwise Trust Schema
+; Sovereign trust gates - T_B(A) controls how B interacts with A
+
+trust-pairwise = {
+  ; The person being trusted/distrusted (HER CID)
+  to: cid,
+  
+  ; Trust level enum
+  level: trust-level,
+  
+  ; When this trust level was set
+  updated_at: timestamp,
+  
+  ; Optional reason/context (local only)
+  ? reason: tstr .size (1..500),
+  
+  ; Optional expiration (for temporary trust changes)
+  ? expires_at: timestamp,
+  
+  ; Signature by the trusting party
+  signature: signature
+}
+
+trust-level = &(
+  allow: 0,      ; Full interaction capabilities
+  cautious: 1,   ; Limited interactions with additional friction
+  block: 2       ; No direct interaction permitted
+)
+
+; Batch trust update for efficiency
+trust-batch = {
+  ; List of trust changes
+  updates: [+ trust-pairwise],
+  
+  ; Batch timestamp
+  created_at: timestamp,
+  
+  ; Batch signature
+  signature: signature
+}
+
+; Trust gate query result
+trust-gate-status = {
+  ; The relationship being queried
+  from: cid,
+  to: cid,
+  
+  ; Current trust level
+  level: trust-level,
+  
+  ; When it was last updated
+  last_updated: timestamp,
+  
+  ; Whether it's currently in cooldown period
+  in_cooldown: bool,
+  
+  ; When cooldown ends (if in cooldown)
+  ? cooldown_ends: timestamp
+}
+
+; Trust history for audit purposes
+trust-history = {
+  ; The relationship
+  from: cid,
+  to: cid,
+  
+  ; Chronological list of trust level changes
+  history: [+ trust-history-entry]
+}
+
+trust-history-entry = {
+  ; Trust level at this point
+  level: trust-level,
+  
+  ; When the change occurred
+  timestamp: timestamp,
+  
+  ; Optional context for the change
+  ? context: tstr .size (1..200)
+}
